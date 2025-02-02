@@ -43,6 +43,9 @@ export async function createWebAgent() {
 
 export async function getSessionToken(agentId: string) {
   try {
+    console.log('Fetching session token for agent:', agentId);
+    console.log('BLAND_API_KEY:', BLAND_API_KEY);
+
     const response = await fetch(`${BLAND_WEB_URL}/v1/agents/${agentId}/authorize`, {
       method: 'POST',
       headers: {
@@ -50,7 +53,7 @@ export async function getSessionToken(agentId: string) {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({}) // Add any required body parameters here
     });
 
     if (!response.ok) {
@@ -63,7 +66,9 @@ export async function getSessionToken(agentId: string) {
       throw new Error(`API responded with status: ${response.status} - ${errorText}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('Session token response:', data);
+    return data;
   } catch (error) {
     console.error('Error getting session token:', error);
     throw error;
