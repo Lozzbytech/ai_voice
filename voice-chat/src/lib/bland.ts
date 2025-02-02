@@ -1,6 +1,8 @@
 import { agentConfig } from '../config/agent-config';
 
+
 const BLAND_API_KEY = process.env.NEXT_PUBLIC_BLAND_API_KEY!;
+const BLAND_AGENT_ID = process.env.NEXT_PUBLIC_BLAND_AGENT_ID || agentConfig.agentId;
 const BLAND_API_URL = 'https://api.bland.ai';
 const BLAND_WEB_URL = 'https://web.bland.ai';
 
@@ -41,15 +43,14 @@ export async function createWebAgent() {
   }
 }
 
-export async function getSessionToken(agentId: string) {
+export async function getSessionToken() {
   try {
-    console.log('Fetching session token for agent:', agentId);
-    console.log('BLAND_API_KEY:', BLAND_API_KEY);
+    console.log('Fetching session token for agent:', BLAND_AGENT_ID);
 
-    const response = await fetch(`${BLAND_WEB_URL}/v1/agents/${agentId}/authorize`, {
+    const response = await fetch(`${BLAND_WEB_URL}/v1/agents/${BLAND_AGENT_ID}/authorize`, {
       method: 'POST',
       headers: {
-        'authorization': BLAND_API_KEY, // or `Bearer ${BLAND_API_KEY}` if required
+        'authorization': BLAND_API_KEY,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
@@ -71,6 +72,39 @@ export async function getSessionToken(agentId: string) {
     return data;
   } catch (error) {
     console.error('Error getting session token:', error);
+    throw error;
+  }
+}
+
+export async function startConversation() {
+  try {
+    // Fetch the session token for the agent
+    const sessionToken = await getSessionToken(BLAND_AGENT_ID);
+    console.log('Session token:', sessionToken);
+
+    // Use the session token to start a conversation
+    const conversationResponse = await fetch(`${BLAND_API_URL}/v1/conversations`, {
+      method: 'POST',
+      headers: {
+        'authorization': `Bearer ${sessionToken.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        agent_id: BLAND_AGENT_ID,
+        // Add other required parameters here
+      })
+    });
+
+    if (!conversationResponse.ok) {
+      const errorText = await conversationResponse.text();
+      throw new Error(`Failed to start conversation: ${conversationResponse.status} - ${errorText}`);
+    }
+
+    const conversationData = await conversationResponse.json();
+    console.log('Conversation started:', conversationData);
+    return conversationData;
+  } catch (error) {
+    console.error('Error starting conversation:', error);
     throw error;
   }
 }

@@ -1,44 +1,40 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Button } from './ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { Mic, MicOff, Loader2, WifiOff, Waves } from 'lucide-react'
-import { BlandWebClient } from 'bland-client-js-sdk'
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Mic, MicOff, Loader2, WifiOff, Waves } from 'lucide-react';
+import { BlandWebClient } from 'bland-client-js-sdk';
 
 type Message = {
-  id: string
-  text: string
-  sender: 'user' | 'ai'
-}
+  id: string;
+  text: string;
+  sender: 'user' | 'ai';
+};
 
 interface VoiceChatProps {
   agentId: string;
 }
 
 export default function VoiceChat({ agentId }: VoiceChatProps) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isRecording, setIsRecording] = useState(false)
-  const [status, setStatus] = useState<string>('Idle')
-  const [error, setError] = useState<string | null>(null)
-  const [audioLevel, setAudioLevel] = useState<number>(0)
-  const [isLoading, setIsLoading] = useState(false)
-  const clientRef = useRef<BlandWebClient | null>(null)
-  const audioLevelIntervalRef = useRef<NodeJS.Timeout>()
-  const [isConnected, setIsConnected] = useState(false)
-  const [callId, setCallId] = useState<string>('')
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [status, setStatus] = useState<string>('Idle');
+  const [error, setError] = useState<string | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const clientRef = useRef<BlandWebClient | null>(null);
+  const audioLevelIntervalRef = useRef<NodeJS.Timeout>();
+  const [isConnected, setIsConnected] = useState(false);
+  const [callId, setCallId] = useState<string>('');
 
   // Utility functions for cleanup
   const cleanupWebSocket = async (wsInstance: WebSocket): Promise<void> => {
     if (wsInstance && wsInstance.readyState !== WebSocket.CLOSED) {
-      // Remove listeners
       wsInstance.onclose = null;
       wsInstance.onerror = null;
       wsInstance.onmessage = null;
       wsInstance.onopen = null;
-      
-      // Close connection
       wsInstance.close(1000, 'User disconnected');
-      
-      // Wait for closure
+
       await new Promise<void>((resolve) => {
         const checkClosed = setInterval(() => {
           if (wsInstance.readyState === WebSocket.CLOSED) {
@@ -46,7 +42,7 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
             resolve();
           }
         }, 50);
-        
+
         setTimeout(() => {
           clearInterval(checkClosed);
           resolve();
@@ -73,13 +69,13 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
   const releaseMicrophone = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioDevices = devices.filter(device => device.kind === 'audioinput');
-      
+      const audioDevices = devices.filter((device) => device.kind === 'audioinput');
+
       for (const device of audioDevices) {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: device.deviceId }
+          audio: { deviceId: device.deviceId },
         });
-        stream.getTracks().forEach(track => {
+        stream.getTracks().forEach((track) => {
           track.enabled = false;
           track.stop();
         });
@@ -92,7 +88,6 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
   const cleanup = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Clear audio level interval
       if (audioLevelIntervalRef.current) {
         clearInterval(audioLevelIntervalRef.current);
         audioLevelIntervalRef.current = undefined;
@@ -100,26 +95,18 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
 
       if (clientRef.current) {
         try {
-          // Stop ongoing processes
           if (typeof (clientRef.current as any).stop === 'function') {
             await (clientRef.current as any).stop();
           }
 
-          // Cleanup WebSocket
-          const wsInstance = (clientRef.current as any)._ws || 
-                           (clientRef.current as any).ws || 
-                           (clientRef.current as any).webSocket;
+          const wsInstance = (clientRef.current as any)._ws || (clientRef.current as any).ws || (clientRef.current as any).webSocket;
           await cleanupWebSocket(wsInstance);
 
-          // Cleanup client
           if (typeof clientRef.current.disconnect === 'function') {
             await clientRef.current.disconnect();
           }
 
-          // Cleanup media stream
           cleanupMediaStream((clientRef.current as any).mediaStream);
-
-          // Cleanup audio context
           await cleanupAudioContext((clientRef.current as any).audioContext);
 
           clientRef.current = null;
@@ -129,14 +116,11 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
         }
       }
 
-      // Release microphone as final step
       await releaseMicrophone();
-
     } catch (err) {
       console.error('Error during cleanup:', err);
       setError(err instanceof Error ? err.message : 'Cleanup failed');
     } finally {
-      // Reset states
       setIsConnected(false);
       setIsRecording(false);
       setStatus('Disconnected');
@@ -152,11 +136,11 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
       setStatus('Disconnecting...');
       await cleanup();
     } else {
-      initVoiceChat(); // Your existing initVoiceChat function
+      initVoiceChat();
     }
   };
 
-  // Add connection status effect
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (isConnected) {
@@ -167,57 +151,56 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
 
   const initVoiceChat = async () => {
     if (!agentId) {
-      setError('Agent ID is not set')
-      return
+      setError('Agent ID is not set');
+      return;
     }
 
-    cleanup() // Cleanup any existing connections
-    setStatus('Initializing...')
-    setError(null)
-    setIsLoading(true)
+    await cleanup(); // Cleanup any existing connections
+    setStatus('Initializing...');
+    setError(null);
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/getToken', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
-      })
-      
-      const data = await response.json()
+        body: JSON.stringify({ agentId }),
+      });
+
+      const data = await response.json();
 
       if (!data.token) {
-        throw new Error('No token received')
+        throw new Error('No token received');
       }
 
-      setStatus('Connecting to Bland AI...')
-      clientRef.current = new BlandWebClient(agentId, data.token)
+      setStatus('Connecting to Bland AI...');
+      clientRef.current = new BlandWebClient(agentId, data.token);
 
-      const currentCallId = Date.now().toString()
+      const currentCallId = Date.now().toString();
       await clientRef.current.initConversation({
         sampleRate: 44100,
-        callId: currentCallId
-      })
+        callId: currentCallId,
+      });
 
-      setCallId(currentCallId)
-      setStatus('Connected! Start speaking...')
-      setIsRecording(true)
-      setIsConnected(true)
+      setCallId(currentCallId);
+      setStatus('Connected! Start speaking...');
+      setIsRecording(true);
+      setIsConnected(true);
 
       // Simulate audio levels for visualization
       audioLevelIntervalRef.current = setInterval(() => {
-        setAudioLevel(Math.random())
-      }, 100)
-
+        setAudioLevel(Math.random());
+      }, 100);
     } catch (err) {
-      console.error('Voice chat error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to connect to voice chat')
-      setStatus('Error connecting')
-      setIsRecording(false)
-      cleanup()
+      console.error('Voice chat error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect to voice chat');
+      setStatus('Error connecting');
+      setIsRecording(false);
+      await cleanup();
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto h-[400px] overflow-hidden border-none bg-white/10 backdrop-blur-lg shadow-2xl">
@@ -226,30 +209,26 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
         <CardTitle className="relative flex items-center justify-between text-2xl font-light tracking-tight text-white">
           <span className="flex items-center gap-3 w-full justify-center">
             Voice Assistant
-            {isLoading && (
-              <Loader2 className="h-4 w-4 animate-spin text-white/70" />
-            )}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-white/70" />}
           </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-between h-[300px] px-8">
         <div className="text-center w-full flex flex-col items-center gap-6">
-          <div className={`text-lg font-light transition-colors duration-300 ${
-            isRecording ? 'text-white' : 
-            isLoading ? 'text-white/70' : 'text-white/50'
-          }`}>
+          <div
+            className={`text-lg font-light transition-colors duration-300 ${
+              isRecording ? 'text-white' : isLoading ? 'text-white/70' : 'text-white/50'
+            }`}
+          >
             {status}
           </div>
 
-          <Button 
-            onClick={handleVoiceToggle} 
-            size="lg" 
+          <Button
+            onClick={handleVoiceToggle}
+            size="lg"
             className={`
               w-24 h-24 rounded-full transition-colors duration-500 
-              ${isRecording 
-                ? 'bg-red-500/20 hover:bg-red-500/30' 
-                : 'bg-white/10 hover:bg-white/20'
-              } 
+              ${isRecording ? 'bg-red-500/20 hover:bg-red-500/30' : 'bg-white/10 hover:bg-white/20'}
               border-none shadow-xl hover:shadow-2xl
               flex items-center justify-center
               group
@@ -273,16 +252,18 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
                     style={{
                       height: `${Math.max(12, Math.random() * 48)}px`,
                       animationDelay: `${i * 0.1}s`,
-                      animationDuration: '0.5s'
+                      animationDuration: '0.5s',
                     }}
                   />
                 ))}
               </div>
-            ) : !isLoading && (
-              <div className="flex justify-center items-center gap-2 text-white/50">
-                <WifiOff className="h-4 w-4" />
-                <span className="text-sm font-light">Ready to start</span>
-              </div>
+            ) : (
+              !isLoading && (
+                <div className="flex justify-center items-center gap-2 text-white/50">
+                  <WifiOff className="h-4 w-4" />
+                  <span className="text-sm font-light">Ready to start</span>
+                </div>
+              )
             )}
           </div>
 
@@ -294,5 +275,5 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
         </div>
       </CardContent>
     </Card>
-  )
-} 
+  );
+}
