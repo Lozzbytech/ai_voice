@@ -2,7 +2,7 @@ import { agentConfig } from '../config/agent-config';
 
 
 const BLAND_API_KEY = process.env.NEXT_PUBLIC_BLAND_API_KEY!;
-const BLAND_AGENT_ID = process.env.NEXT_PUBLIC_BLAND_AGENT_ID!;
+const BLAND_AGENT_ID = process.env.NEXT_PUBLIC_BLAND_AGENT_ID;
 const BLAND_API_URL = 'https://api.bland.ai';
 const BLAND_WEB_URL = 'https://web.bland.ai';
 
