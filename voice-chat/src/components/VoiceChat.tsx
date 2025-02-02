@@ -151,12 +151,11 @@ export default function VoiceChat({ agentId }: VoiceChatProps) {
 
   const initVoiceChat = async () => {
     const agentId = process.env.NEXT_PUBLIC_BLAND_AGENT_ID;
+
     if (!agentId) {
-      return <div>Missing agent ID configuration</div>;
+      setError('Agent ID is not set');
+      return;
     }
-  
-    return <VoiceChat agentId={agentId} />;
-  }
 
     await cleanup(); // Cleanup any existing connections
     setStatus('Initializing...');
