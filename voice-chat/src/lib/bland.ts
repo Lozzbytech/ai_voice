@@ -44,39 +44,15 @@ export async function createWebAgent() {
 }
 
 export async function getSessionToken() {
+  if (!BLAND_AGENT_ID) {
+    throw new Error('BLAND_AGENT_ID is not set in environment variables');
+  }
+
   try {
     console.log('Fetching session token for agent:', BLAND_AGENT_ID);
+    // ... rest of your code
 
-    const response = await fetch(`${BLAND_WEB_URL}/v1/agents/${BLAND_AGENT_ID}/authorize`, {
-      method: 'POST',
-      headers: {
-        'authorization': BLAND_API_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({}) // Add any required body parameters here
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Session token error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
-      });
-      throw new Error(`API responded with status: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('Session token response:', data);
-    return data;
-  } catch (error) {
-    console.error('Error getting session token:', error);
-    throw error;
-  }
-}
-
-export async function startConversation() {
+ async function startConversation() {
   try {
     // Fetch the session token for the agent
     const sessionToken = await getSessionToken(BLAND_AGENT_ID);

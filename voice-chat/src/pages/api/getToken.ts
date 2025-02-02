@@ -1,29 +1,29 @@
+import { getSessionToken } from '@/lib/bland';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSessionToken } from '../../lib/bland';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
     const { agentId } = req.body;
-    console.log('Received request for agent:', agentId);
     
-    const tokenResponse = await getSessionToken(agentId);
-    console.log('Token response:', tokenResponse);
-    
-    if (!tokenResponse.token) {
-      console.error('No token in response:', tokenResponse);
-      throw new Error('No token in response');
+    if (!agentId) {
+      return res.status(400).json({ message: 'Agent ID is required' });
     }
 
-    res.status(200).json({ token: tokenResponse.token });
+    const sessionData = await getSessionToken();
+    
+    if (!sessionData?.token) {
+      return res.status(500).json({ message: 'No token received from Bland AI' });
+    }
+
+    return res.status(200).json({ token: sessionData.token });
   } catch (error) {
-    console.error('Token error:', error);
-    res.status(500).json({ 
-      error: 'Failed to get token',
-      details: error instanceof Error ? error.message : 'Unknown error'
+    console.error('Token fetch error:', error);
+    return res.status(500).json({ 
+      message: error instanceof Error ? error.message : 'Failed to get token' 
     });
   }
-} 
+}
