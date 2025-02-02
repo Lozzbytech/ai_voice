@@ -1,0 +1,24 @@
+{
+  "name": "bland-web-boilerplate",
+  "private": true,
+  "workspaces": [
+    "voice-chat"
+  ],
+  "scripts": {
+    "dev": "cd voice-chat && yarn dev",
+    "build": "cd voice-chat && yarn build",
+    "start": "cd voice-chat && yarn start"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
