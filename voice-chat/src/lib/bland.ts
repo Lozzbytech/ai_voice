@@ -11,11 +11,12 @@ if (!BLAND_API_KEY) {
 export async function createWebAgent() {
   try {
     console.log('Creating new web agent...');
+    console.log('BLAND_API_KEY:', BLAND_API_KEY);
 
     const response = await fetch(`${BLAND_API_URL}/v1/agents`, {
       method: 'POST',
       headers: {
-        'authorization': BLAND_API_KEY,
+        'authorization': BLAND_API_KEY, // or `Bearer ${BLAND_API_KEY}` if required
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(agentConfig)
@@ -23,7 +24,11 @@ export async function createWebAgent() {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Agent creation error:', errorText);
+      console.error('Agent creation error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
       throw new Error(`Failed to create agent: ${response.status} - ${errorText}`);
     }
 
@@ -41,7 +46,7 @@ export async function getSessionToken(agentId: string) {
     const response = await fetch(`${BLAND_WEB_URL}/v1/agents/${agentId}/authorize`, {
       method: 'POST',
       headers: {
-        'authorization': BLAND_API_KEY,
+        'authorization': BLAND_API_KEY, // or `Bearer ${BLAND_API_KEY}` if required
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
@@ -50,6 +55,11 @@ export async function getSessionToken(agentId: string) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Session token error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
       throw new Error(`API responded with status: ${response.status} - ${errorText}`);
     }
 
@@ -58,4 +68,4 @@ export async function getSessionToken(agentId: string) {
     console.error('Error getting session token:', error);
     throw error;
   }
-} 
+}
